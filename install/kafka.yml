@@ -1,0 +1,18 @@
+---
+#
+# Playbook to install the ELK or EFK stack
+#
+- hosts: zookeeper
+  remote_user: "{{ ansible_system_user }}"
+  vars_files:
+    - group_vars/kafka_vars.yml
+  roles:
+    - { role: zookeeper }                                                                                                                                  
+                    
+- hosts: kafka
+  remote_user: "{{ ansible_system_user }}"
+  vars_files:
+    - group_vars/kafka_vars.yml
+  roles:
+    - { role: kafka }
+

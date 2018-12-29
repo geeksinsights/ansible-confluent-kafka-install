@@ -1,0 +1,127 @@
+--- 
+####
+#Zookeeper Tasks
+###
+
+- name: Copy Repo file
+  copy:
+    src="{{ role_path }}/files/confluent.repo"
+    dest=/etc/yum.repos.d/
+    owner=root
+    group=root
+    mode=0750
+  become: true
+
+- name: Download RPM Key
+  shell: |
+    sudo rpm --import https://packages.confluent.io/rpm/4.1/archive.key
+  become: true
+
+- name: Install Yum Package
+  shell: |
+    yum -y install java-1.8.0-openjdk.x86_64
+    yum -y install confluent-platform-oss-2.11 
+  become: true
+  warn: False
+
+- name: Add JAVA HOME to PATH
+  lineinfile:
+    path: /etc/profile
+    line: export JAVA_HOME=/usr/lib/jvm/jre-1.8.0-openjdk
+
+- name: Add JRE HOME to PATH
+  lineinfile:
+    path: /etc/profile
+    line: export JRE_HOME=/usr/lib/jvm/jre
+
+- name: Create Necessary Directories
+  shell: |
+    mkdir -p /zookeeper/data /etc/kafka/
+    chown -R cp-kafka:confluent /zookeeper/
+    chown -R cp-kafka:confluent /zookeeper/data /etc/kafka/
+    rm -f /etc/zookeeper/
+  become: true
+
+
+- name: Copy Repo file
+  copy:
+    src="{{ role_path }}/files/zookeeper.properties"
+    dest=/etc/kafka
+    owner=cp-kafka
+    group=confluent
+    mode=0750
+  become: true
+
+  
+- name: write a myid file based on the position in the group
+  copy: 
+    content: "{{ play_hosts.index(inventory_hostname) }}"
+    dest: /zookeeper/data/myid
+
+- name: Add line zookeeper hosts to zookeeper.properties
+  lineinfile:
+    path: /etc/kafka/zookeeper.properties
+    line: server.{{ play_hosts.index(inventory_hostname) }}={{ inventory_hostname }}:2888:3888
+    state: present
+  ignore_errors: "{{ ansible_check_mode }}"
+  with_items: groups['all']
+
+- name: Update zookeeper directory in zookeeper.properties
+  become: true
+  replace:
+    path=/etc/kafka/zookeeper.properties
+    regexp='datadir'
+    replace="{{ zookeeper_directory }}"
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: zookeeper nodes replacement in server.properties
+  replace:
+    path: "{{ item.path }}"
+    regexp: "{{ item.regexp1 }}"
+    replace: "{{ item.replace }}"
+  with_items:
+    - { path: '/etc/kafka/zookeeper.properties', regexp1: 'domain', replace: '{{ domain }}'}
+    - { path: '/etc/kafka/zookeeper.properties', regexp1: 'zoonode1', replace: '{{ zoonode1 }}'}
+    - { path: '/etc/kafka/zookeeper.properties', regexp1: 'zoonode2', replace: '{{ zoonode2 }}'}
+    - { path: '/etc/kafka/zookeeper.properties', regexp1: 'zoonode3', replace: '{{ zoonode3 }}'}
+  ignore_errors: "{{ ansible_check_mode }}"
+  when: "{{ multinode_zookeeper }}" == 'Yes'
+
+- name: zookeeper nodes replacement in server.properties
+  replace:
+    path: "{{ item.path }}"
+    regexp: "{{ item.regexp1 }}"
+    replace: "{{ item.replace }}"
+  with_items:
+    - { path: '/etc/kafka/zookeeper.properties', regexp1: 'domain', replace: '{{ domain }}'}
+    - { path: '/etc/kafka/zookeeper.properties', regexp1: 'zoonode1', replace: '{{ zoonode1 }}'}
+  ignore_errors: "{{ ansible_check_mode }}"
+  when: "{{ multinode_zookeeper }}" == 'No'
+
+- name: replace line
+  lineinfile: 
+    dest: /etc/zookeeper/zookeeper.properties 
+      regexp: '^(.*)server.1(.*)$' 
+      line: ''
+      backrefs: yes
+  when: "{{ multinode_zookeeper }}" == 'No'
+
+- name: replace line
+  lineinfile: 
+    dest: /etc/zookeeper/zookeeper.properties 
+      regexp: '^(.*)server.2(.*)$' 
+      line: ''
+      backrefs: yes
+  when: "{{ multinode_zookeeper }}" == 'No'
+
+- name: size half of memory
+  replace:
+    path: "{{ item.path }}"
+    regexp: "{{ item.regexp1 }}"
+    replace: "{{ item.replace }}"
+  with_items:
+    - { path: '/usr/bin/zookeeper-server-start', regexp1: '-Xmx512M -Xms512M', replace: '-Xmx{{ memory_gb }}G -Xms{{ memory_gb }}G'}
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: enable unit
+  command: systemctl enable confluent-zookeeper

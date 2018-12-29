@@ -1,0 +1,44 @@
+---
+
+# Default Ansible user
+# change this if you use a non-root user for running Ansible playbooks
+ansible_system_user: root
+
+# EPEL Repository for extra packages
+epel_repo: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+java_home: /usr/lib/jvm/jre-1.8.0-openjdk
+
+############
+##Kafka SSL Params
+############
+ssl_mode: Yes
+keystore_password: inputpasswordhere
+key_password: inputpasswordhere
+truststore_password: inputpasswordhere
+keystore_path: /etc/kafka/
+key_file: server.key
+cert_file: server.crt
+chain_file: server.crt
+truststore_name: kafka_truststore.jks
+keystore_name: kafka_keystore.jks
+
+#######
+##Zookeeperlist - Provide list in form of node1:2181,node2:2181
+#######
+zookeeper_node_list: prodzookeep01.localdomain:2181,prodzookeep02.localdomain:2181,prodzookeep03.localdomain:2181
+zoonode1: prodzookeep01
+zoonode2: prodzookeep02
+zoonode3: prodzookeep03
+
+########
+## Data Directories
+########
+zookeeper_directory: /zookeeper/data/
+kafka_directory: /kafka1/data/,/kafka2/data/,/kafka3/data/,/kafka4/data/,/kafka5/data/
+
+####
+##domain variable if nothing keep localdomain
+####
+domain: localdomain
+env: prod
+memory_gb: 32

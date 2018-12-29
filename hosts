@@ -1,0 +1,9 @@
+[zookeeper]
+prodzookeep01.localdomain
+prodzookeep02.localdomain
+prodzookeep03.localdomain
+
+[kafka]
+prodkafka01.localdomain
+prodkafka02.localdomain
+prodkafka03.localdomain
